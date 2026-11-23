@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Music Light Mode
 // @namespace    https://music.youtube.com/
-// @version      1.0.0
+// @version      1.1.7
 // @description  A light colour palette for YouTube Music that follows your device setting.
 // @match        https://music.youtube.com/*
 // @run-at       document-start
@@ -44,7 +44,7 @@
       }
 
       html:root:root {
-        --ytm-button-hover: color-mix(in srgb, var(--ytm-on-surface) 24%, transparent);
+        --ytm-button-hover: color-mix(in srgb, var(--ytm-on-surface) 14%, transparent);
 
         --ytmusic-background: var(--ytm-surface);
         --ytmusic-general-background-c: var(--ytm-surface);
@@ -182,16 +182,6 @@
         background-color: var(--ytm-surface-low);
       }
 
-      html:root ytmusic-app ytmusic-app-layout:not(
-        .content-scrolled,
-        [player-page-open],
-        :has(#browse-page[immersive-mode]:not([hidden]) ytmusic-immersive-header-renderer > .image)
-      )
-        tp-yt-app-drawer[persistent] #guide-wrapper.ytmusic-app {
-        background-color: transparent;
-        border-inline-end-color: transparent;
-      }
-
       html:root ytmusic-guide-entry-renderer[active] tp-yt-paper-item.ytmusic-guide-entry-renderer {
         --ytmusic-text-primary: var(--ytm-on-primary-container);
         background-color: var(--ytm-primary-container);
@@ -280,7 +270,7 @@
         --iron-icon-fill-color: currentColor;
         color: var(--ytm-on-surface);
         background-color: transparent;
-        border-color: var(--ytm-outline);
+        border: 1px solid var(--ytm-outline);
 
         &:hover:not(:disabled, [disabled], [aria-disabled="true"]) {
           background-color: var(--ytm-button-hover);
@@ -321,7 +311,7 @@
       html:root #browse-page ytmusic-section-list-renderer #header
         ytmusic-chip-cloud-renderer[chip-type="DEFAULT"] ytmusic-chip-cloud-chip-renderer a[role="tab"] {
         background-color: transparent;
-        border-color: var(--ytm-outline);
+        border: 1px solid var(--ytm-outline);
 
         &:hover {
           background-color: var(--ytm-button-hover);
@@ -330,14 +320,33 @@
       }
 
       html:root #browse-page ytmusic-section-list-renderer #header
-        ytmusic-chip-cloud-renderer[chip-type="DEFAULT"] ytmusic-chip-cloud-chip-renderer a[role="tab"][aria-selected="true"] {
+        ytmusic-chip-cloud-renderer[chip-type="DEFAULT"] ytmusic-chip-cloud-chip-renderer a[role="tab"][aria-selected="true"],
+      html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer
+        a.ytmusic-chip-cloud-chip-renderer:is(
+          [aria-selected="true"],
+          [role="button"]:has(> yt-icon):not(:has(> .text))
+        ),
+      html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer:is(
+        [is-selected], [selected], .iron-selected, [data-ytm-clear-filter]
+      )
+        a.ytmusic-chip-cloud-chip-renderer {
         --yt-endpoint-hover-color: var(--ytm-on-primary);
+        --icon-color: currentColor;
+        --iron-icon-fill-color: currentColor;
         background-color: var(--ytm-primary) !important;
         border-color: transparent;
         color: var(--ytm-on-primary) !important;
 
         &:hover {
-          background-color: color-mix(in srgb, var(--ytm-primary), var(--ytm-on-surface) 24%) !important;
+          background-color: #292929 !important;
+        }
+      }
+
+      html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+        background-color: var(--ytm-surface-container);
+
+        &:is(:hover, :focus-visible) {
+          background-color: color-mix(in srgb, var(--ytm-on-surface) 14%, var(--ytm-surface-container));
         }
       }
 
@@ -361,17 +370,53 @@
       }
 
       html:root ytmusic-card-shelf-renderer {
-        & :is(.undercards-container-text, #undercards > yt-formatted-string) {
-          --yt-endpoint-color: var(--ytm-on-surface);
-          color: var(--ytm-on-surface) !important;
+        & :is(.undercards-container-text, #undercards > yt-formatted-string,
+          #undercards > yt-attributed-string, #undercards ytmusic-message-renderer[render-style=RENDER_STYLE_SIMPLE_HEADER]),
+        & :is(.undercards-container-text, #undercards > yt-formatted-string,
+          #undercards > yt-attributed-string, #undercards ytmusic-message-renderer[render-style=RENDER_STYLE_SIMPLE_HEADER]) * {
+          --ytmusic-message-renderer-text-color: #000;
+          --ytmusic-text-primary: #000;
+          --yt-endpoint-color: #000;
+          --yt-endpoint-hover-color: #000;
+          --yt-endpoint-visited-color: #000;
+          color: #000 !important;
+          -webkit-text-fill-color: #000 !important;
+        }
+      }
+
+      html:root :is(
+        ytmusic-card-shelf-renderer .main-action-container :is(ytmusic-menu-renderer, yt-button-shape, yt-icon-button),
+        ytmusic-player-bar:not([player-fullscreened]) .middle-controls-buttons
+          :is(ytmusic-like-button-renderer, ytmusic-menu-renderer)
+      ) {
+        --ytmusic-text-primary: #000;
+        --ytmusic-menu-renderer-overflow-button-color: #000;
+        --yt-button-color: #000;
+        --icon-color: #000;
+        --iron-icon-fill-color: #000;
+        color: #000;
+
+        & :is(yt-button-shape, button, yt-icon-button, yt-icon, .ytIconWrapperHost) {
+          color: #000 !important;
         }
 
-        & .main-action-container :is(ytmusic-menu-renderer, #button-shape, #button, button) {
-          --ytmusic-menu-renderer-overflow-button-color: var(--ytm-on-surface);
-          --icon-color: var(--ytm-on-surface);
-          --iron-icon-fill-color: var(--ytm-on-surface);
-          color: var(--ytm-on-surface);
+        & svg [fill]:not([fill="none"], [fill^="url("]) {
+          fill: #000;
         }
+
+        & svg [stroke]:not([stroke="none"], [stroke^="url("]) {
+          stroke: #000;
+        }
+      }
+
+      html:root ytmusic-live-badge-renderer,
+      html:root ytmusic-live-badge-renderer yt-formatted-string {
+        color: #fff;
+      }
+
+      html:root ytmusic-navigation-button-renderer:not([button-style=STYLE_OUTLINE_BORDER])
+        button.ytmusic-navigation-button-renderer:is(:hover, :focus-within) {
+        background-color: var(--ytm-surface-highest);
       }
 
       html:root :is(
@@ -391,7 +436,7 @@
         color: var(--yt-button-color) !important;
         -webkit-text-fill-color: currentColor !important;
         background-color: transparent;
-        border-color: var(--ytm-on-variant) !important;
+        border: 1px solid var(--ytm-on-variant) !important;
 
         &:hover {
           background-color: var(--ytm-button-hover) !important;
@@ -533,12 +578,14 @@
       }
 
       html:root ytmusic-comments {
-        --ytm-thread-line: color-mix(in srgb, var(--ytm-outline) 55%, var(--ytm-divider));
+        --td8562cdc203bc683: var(--ytm-divider);
+        --t02c0a2c868c14ce8: var(--ytm-outline);
         --yt-endpoint-color: var(--ytm-link);
         --yt-endpoint-hover-color: var(--ytm-link);
         --yt-endpoint-visited-color: var(--ytm-link);
         --yt-button-color: var(--ytm-on-surface);
         color: var(--ytm-on-surface);
+        background-color: var(--ytm-surface);
 
         & :is(
           yt-formatted-string.ytd-comments-header-renderer,
@@ -581,12 +628,72 @@
           color: var(--ytm-on-primary-container);
         }
 
+        & #pinned-comment-badge.ytd-comment-view-model :is(
+          ytw-pinned-comment-badge-renderer, .ytwPinnedCommentBadgeRendererCommentPin
+        ) {
+          --icon-color: currentColor;
+          --iron-icon-fill-color: currentColor;
+          color: var(--ytm-on-variant);
+        }
+
+        & ytd-author-comment-badge-renderer {
+          --ytd-author-comment-badge-name-color: var(--ytm-on-surface);
+          --yt-endpoint-color: var(--ytd-author-comment-badge-name-color);
+          --yt-endpoint-hover-color: var(--ytd-author-comment-badge-name-color);
+          --yt-endpoint-visited-color: var(--ytd-author-comment-badge-name-color);
+
+          &[creator] {
+            --ytd-author-comment-badge-background-color: var(--ytm-primary-container);
+            --ytd-author-comment-badge-name-color: var(--ytm-on-primary-container);
+          }
+
+          & #icon.ytd-author-comment-badge-renderer {
+            color: var(--ytd-author-comment-badge-name-color);
+          }
+        }
+
+        & #action-menu.ytd-comment-view-model :is(button, yt-icon-button, yt-icon, .ytIconWrapperHost) {
+          --icon-color: currentColor;
+          --iron-icon-fill-color: currentColor;
+          color: var(--ytm-on-variant);
+        }
+
+        & ytd-creator-heart-renderer {
+          /* Use one silhouette for the red heart and its surface-colored border. */
+          --ytm-heart-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21 3.8 13.3C-2 7.7 5.5.8 12 6.6c6.5-5.8 14 1.1 8.2 6.7Z'/%3E%3C/svg%3E");
+
+          & #hearted-thumbnail.ytd-creator-heart-renderer {
+            border-color: var(--ytm-divider);
+          }
+
+          & :is(#hearted, #hearted-border).ytd-creator-heart-renderer {
+            mask: var(--ytm-heart-shape) center / contain no-repeat;
+            background-color: currentColor;
+
+            & > * {
+              visibility: hidden;
+            }
+          }
+
+          & #hearted.ytd-creator-heart-renderer {
+            color: #f03;
+          }
+
+          & #hearted-border.ytd-creator-heart-renderer {
+            color: var(--ytm-surface);
+          }
+
+          & #unhearted.ytd-creator-heart-renderer {
+            color: var(--ytm-on-variant);
+          }
+        }
+
         & :is(ytd-comment-simplebox-renderer, ytd-comment-reply-dialog-renderer) #placeholder-area {
           border-color: var(--ytm-divider);
         }
 
         & :is(.continuation.ytd-comment-view-model, .ytSubThreadConnection, .ytSubThreadContinuation) {
-          border-color: var(--ytm-thread-line);
+          border-color: var(--ytm-divider);
         }
 
         & ytd-comment-view-model[hovered] .continuation.ytd-comment-view-model {
@@ -653,19 +760,31 @@
         background: var(--ytm-surface-high);
       }
 
+      /* Use the artist-header hover treatment for other compact action buttons. */
+      html:root :is(
+        ytmusic-menu-renderer,
+        ytmusic-like-button-renderer,
+        ytmusic-player-bar:not([player-fullscreened]) .middle-controls-buttons
+      ) :is(button.ytSpecButtonShapeNextIconButton, button.yt-spec-button-shape-next--icon-button, yt-icon-button) {
+        &:hover:not(:disabled, [disabled], [aria-disabled="true"], :has(> button:disabled),
+          ytmusic-player-bar[player-fullscreened] *) {
+          background-color: var(--ytm-button-hover) !important;
+        }
+      }
+
       html:root ytmusic-popup-container {
         --paper-dialog-background-color: var(--ytm-surface-high);
         --paper-listbox-background-color: var(--ytm-surface-high);
       }
 
       html:root ytmusic-multi-page-menu-renderer {
-        --t08a7c6c176cbc5c2: var(--ytm-surface-high);
+        --t08a7c6c176cbc5c2: var(--ytmusic-search-bar-background-bauhaus);
         --yt-endpoint-color: var(--ytm-on-surface);
         --yt-endpoint-hover-color: var(--ytm-on-surface);
         --yt-endpoint-visited-color: var(--ytm-on-surface);
         --yt-compact-link-color: var(--ytm-on-surface);
         --yt-compact-link-icon-color: var(--ytm-on-surface);
-        background-color: var(--ytm-surface-high);
+        background-color: var(--ytmusic-search-bar-background-bauhaus);
         color: var(--ytm-on-surface);
         box-shadow: var(--ytm-elevation);
 
@@ -694,7 +813,7 @@
         }
 
         & ytd-simple-menu-header-renderer {
-          background-color: var(--ytm-surface-high);
+          background-color: var(--ytmusic-search-bar-background-bauhaus);
           color: var(--ytm-on-surface);
         }
 
@@ -722,7 +841,12 @@
 
       html:root :is(ytmusic-menu-popup-renderer, ytmusic-playback-rate-popup-renderer) {
         background-color: var(--ytmusic-menu-popup-background);
-        border-color: var(--ytm-divider);
+      }
+
+      /* Draw the border around the scroll viewport, independent of its rows. */
+      html:root ytmusic-menu-popup-renderer {
+        box-sizing: border-box;
+        border: 1px solid var(--ytm-outline);
       }
 
       html:root :is(ytmusic-menu-popup-renderer, ytmusic-playback-rate-popup-renderer)
@@ -730,8 +854,66 @@
         --paper-listbox-background-color: transparent;
       }
 
+      html:root ytmusic-menu-popup-renderer > tp-yt-paper-listbox.ytmusic-menu-popup-renderer {
+        border-width: 0;
+      }
+
+      html:root :is(
+        ytmusic-sort-filter-button-renderer > button,
+        yt-sort-filter-sub-menu-renderer :is(#icon-label, #label-icon, [style-target=label-text])
+      ) {
+        --icon-color: var(--ytm-on-surface);
+        --iron-icon-fill-color: var(--ytm-on-surface);
+        color: var(--ytm-on-surface);
+      }
+
+      html:root ytmusic-sort-filter-button-renderer > button.ytmusic-sort-filter-button-renderer {
+        border-color: var(--ytm-divider);
+        background-color: var(--ytm-surface-container);
+      }
+
+      html:root :is(
+        ytmusic-sort-filter-button-renderer > button.ytmusic-sort-filter-button-renderer,
+        yt-sort-filter-sub-menu-renderer yt-dropdown-menu tp-yt-paper-menu-button
+      ):is(:hover, :focus-visible):not([disabled], :disabled, [aria-disabled="true"]) {
+        background-color: var(--ytm-button-hover);
+      }
+
+      html:root tp-yt-paper-listbox.yt-dropdown-menu:has(.item.yt-dropdown-menu),
+      html:root ytmusic-multi-select-menu-renderer :is(#container, #items).ytmusic-multi-select-menu-renderer {
+        background-color: var(--ytm-surface-high);
+        color: var(--ytm-on-surface);
+      }
+
+      html:root tp-yt-paper-listbox.yt-dropdown-menu {
+        & :is(.item, .yt-simple-endpoint, #subtitle).yt-dropdown-menu {
+          --yt-endpoint-color: var(--ytm-on-surface);
+          --yt-endpoint-hover-color: var(--ytm-on-surface);
+          color: var(--ytm-on-surface);
+        }
+
+        & :is(.iron-selected, tp-yt-paper-item).yt-dropdown-menu:is(.iron-selected, :hover, :focus-visible) {
+          background-color: var(--ytm-button-hover);
+        }
+      }
+
       html:root :is(ytmusic-menu-popup-renderer, ytmusic-multi-select-menu-renderer) {
         --ytm-menu-icon: var(--ytm-on-surface);
+        --ytm-menu-highlight: #c9c9c9;
+        --ytmusic-menu-item-focus-background-color: transparent;
+
+        & #items :is(
+          ytmusic-menu-navigation-item-renderer,
+          ytmusic-menu-service-item-renderer,
+          ytmusic-toggle-menu-service-item-renderer,
+          ytmusic-multi-select-menu-item-renderer,
+          ytmusic-menu-service-item-download-renderer > tp-yt-paper-item,
+          [role="menuitem"]
+        ):not([is-disabled], [disabled], [aria-disabled="true"], [is-request-in-progress]):is(
+          :hover, :focus-visible:not(.no-focus-outline *), :has(:focus-visible:not(.no-focus-outline *))
+        ) {
+          background-color: var(--ytm-menu-highlight);
+        }
 
         & :is([is-disabled], [disabled], [aria-disabled="true"]) {
           --ytm-menu-icon: var(--ytm-disabled);
@@ -780,49 +962,42 @@
         outline: 2px solid var(--ytm-primary);
       }
 
-        html:root ytmusic-logo picture:has(img[src*="on_platform_logo_dark.svg"]) {
-          position: relative;
+      html:root ytmusic-logo picture:has(img[src*="on_platform_logo_dark.svg"]) {
+        position: relative;
+      }
+
+      html:root ytmusic-logo img[src*="on_platform_logo_dark.svg"] {
+        clip-path: inset(0 65% 0 0);
+      }
+
+      html:root ytmusic-logo picture:has(img[src*="on_platform_logo_dark.svg"])::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-color: var(--ytm-on-surface);
+        mask: url("https://music.youtube.com/img/on_platform_logo_dark.svg") center / contain no-repeat;
+        clip-path: inset(0 0 0 35%);
+        pointer-events: none;
+      }
+
+      html:root :is(ytmusic-card-shelf-renderer, .ytmusicHorizontalActionCardViewModelHostBodyButton) {
+        --ytm-card-action-ink: #000;
+      }
+
+      html:root ytmusic-card-shelf-renderer {
+        --ytmusic-text-secondary: color-mix(in srgb, var(--ytm-on-surface) 44%, var(--ytm-on-variant));
+        --ytmusic-overlay-text-secondary: var(--ytmusic-text-secondary);
+
+        & .card-container.ytmusic-card-shelf-renderer {
+          background-color: var(--ytm-surface-low);
         }
 
-        html:root ytmusic-logo img[src*="on_platform_logo_dark.svg"] {
-          clip-path: inset(0 65% 0 0);
+        & .immersive-background.ytmusic-card-shelf-renderer::before {
+          background-image: linear-gradient(
+            180deg, color-mix(in srgb, var(--ytm-surface-low) 58%, transparent), var(--ytm-surface-high) 87%
+          );
         }
-
-        html:root ytmusic-logo picture:has(img[src*="on_platform_logo_dark.svg"])::after {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background-color: var(--ytm-on-surface);
-          mask: url("https://music.youtube.com/img/on_platform_logo_dark.svg") center / contain no-repeat;
-          clip-path: inset(0 0 0 35%);
-          pointer-events: none;
-        }
-
-        html:root :is(ytmusic-card-shelf-renderer, .ytmusicHorizontalActionCardViewModelHostBodyButton) {
-          --ytm-card-action-ink: #000;
-        }
-
-        html:root ytmusic-card-shelf-renderer {
-          --ytmusic-text-secondary: color-mix(in srgb, var(--ytm-on-surface) 44%, var(--ytm-on-variant));
-          --ytmusic-overlay-text-secondary: var(--ytmusic-text-secondary);
-
-          & :is(.undercards-container-text, #undercards > yt-formatted-string),
-          & :is(.undercards-container-text, #undercards > yt-formatted-string) :is(a, span) {
-            --yt-endpoint-color: #000;
-            color: #000 !important;
-            -webkit-text-fill-color: #000 !important;
-          }
-
-          & .card-container.ytmusic-card-shelf-renderer {
-            background-color: var(--ytm-surface-low);
-          }
-
-          & .immersive-background.ytmusic-card-shelf-renderer::before {
-            background-image: linear-gradient(
-              180deg, color-mix(in srgb, var(--ytm-surface-low) 58%, transparent), var(--ytm-surface-high) 87%
-            );
-          }
-        }
+      }
 
       /* Use the inverse stock treatment for solid white controls. */
       html:root ytmusic-app :is(
