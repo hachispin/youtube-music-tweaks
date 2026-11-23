@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Music Light Mode
 // @namespace    https://music.youtube.com/
-// @version      1.2.0
+// @version      1.2.5
 // @description  A light colour palette for YouTube Music that follows your device setting.
 // @match        https://music.youtube.com/*
 // @run-at       document-start
@@ -798,6 +798,76 @@
       html:root ytmusic-popup-container {
         --paper-dialog-background-color: var(--ytm-surface-high);
         --paper-listbox-background-color: var(--ytm-surface-high);
+      }
+
+      html:root ytmusic-playlist-form :is(.privacy-dropdown, .privacy-status-menu).ytmusic-playlist-form {
+        & tp-yt-paper-dropdown-menu:not([disabled]),
+        &:is(tp-yt-paper-dropdown-menu):not([disabled]) {
+          --paper-dropdown-menu-icon-color: var(--ytm-primary);
+        }
+
+        & :is(.icon.ytmusic-dropdown-renderer, ytmusic-dropdown-item-renderer:not([disabled]) .icon) {
+          --icon-color: var(--ytm-primary);
+          --iron-icon-fill-color: var(--ytm-primary);
+          color: var(--ytm-primary);
+        }
+
+        &:not([has-error]) #labelAndInputContainer#labelAndInputContainer.label-is-floating
+          > :is(label, .paper-input-label) {
+          color: var(--ytm-on-variant);
+        }
+      }
+
+      html:root yt-create-playlist-dialog-form-view-model
+        .ytDropdownViewModelDropdownContainer:not([aria-disabled="true"]) .ytDropdownViewModelChevronDown {
+        --icon-color: var(--ytm-primary);
+        --iron-icon-fill-color: var(--ytm-primary);
+        color: var(--ytm-primary);
+      }
+
+      html:root :is(ytmusic-playlist-form, yt-create-playlist-dialog-form-view-model) switch-list-item-view-model {
+        & .ytListItemViewModelTitle {
+          color: var(--ytm-on-surface);
+        }
+
+        & .ytListItemViewModelSubtitle {
+          color: var(--ytm-on-variant);
+        }
+
+        & .ytListItemViewModelDisabled .ytListItemViewModelTitle {
+          color: var(--ytm-on-variant);
+        }
+
+        & [role="switch"]:not([aria-disabled="true"], :disabled) {
+          & .ytSwitchShapeTrack {
+            background-color: var(--ytm-track);
+            box-shadow: inset 0 0 0 1px var(--ytm-outline);
+          }
+
+          & .ytSwitchShapeKnob {
+            background-color: var(--ytm-primary);
+          }
+
+          &[aria-checked="true"] .ytSwitchShapeTrack {
+            background-color: var(--ytm-primary);
+            box-shadow: none;
+          }
+
+          &[aria-checked="true"] .ytSwitchShapeKnob {
+            background-color: var(--ytm-on-primary);
+          }
+        }
+      }
+
+      html:root ytmusic-playlist-form .actions.ytmusic-playlist-form :is(
+        .ytSpecButtonShapeNextMono.ytSpecButtonShapeNextText,
+        .yt-spec-button-shape-next--mono.yt-spec-button-shape-next--text
+      ):not(:disabled, [aria-disabled="true"]) {
+        color: var(--ytm-on-surface);
+
+        &:hover {
+          background-color: var(--ytm-button-hover);
+        }
       }
 
       html:root ytmusic-multi-page-menu-renderer {

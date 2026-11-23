@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Music UI Tweaks
 // @namespace    https://music.youtube.com/
-// @version      1.2.3
+// @version      1.2.5
 // @description  Shared layout, artwork dimming, and menu interaction tweaks for YouTube Music.
 // @match        https://music.youtube.com/*
 // @run-at       document-start
