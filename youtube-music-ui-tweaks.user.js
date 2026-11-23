@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Music UI Tweaks
 // @namespace    https://music.youtube.com/
-// @version      1.2.0
+// @version      1.2.3
 // @description  Shared layout, artwork dimming, and menu interaction tweaks for YouTube Music.
 // @match        https://music.youtube.com/*
 // @run-at       document-start
@@ -13,6 +13,38 @@
   'use strict';
 
   GM_addStyle(`
+    img[data-ytm-artwork-fallback] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+    }
+
+    :is(.image-wrapper, .left-items):has(> img[data-ytm-artwork-fallback]:not([hidden])) {
+      & > :is(ytmusic-thumbnail-renderer.image, ytmusic-thumbnail-renderer.thumbnail, yt-img-shadow.thumbnail),
+      & > .thumbnail-wrapper > ytmusic-thumbnail-renderer.thumbnail {
+        visibility: hidden;
+      }
+    }
+
+    .left-items > img[data-ytm-artwork-fallback] {
+      border-radius: var(--ytm-radius-compact, 2px);
+    }
+
+    [has-circle-cropped-thumbnail] :is(.image-wrapper, .left-items) > img[data-ytm-artwork-fallback],
+    :is(.image-wrapper, .left-items):has(
+      > ytmusic-thumbnail-renderer[thumbnail-crop="MUSIC_THUMBNAIL_CROP_CIRCLE"],
+      > .thumbnail-wrapper > ytmusic-thumbnail-renderer[thumbnail-crop="MUSIC_THUMBNAIL_CROP_CIRCLE"]
+    ) > img[data-ytm-artwork-fallback] {
+      border-radius: 50%;
+    }
+
+    ytmusic-responsive-list-item-renderer[unplayable] .left-items > img[data-ytm-artwork-fallback] {
+      visibility: hidden;
+    }
+
     @media (forced-colors: none) {
       html:root:root {
         --ytm-radius-compact: 4px;
@@ -102,6 +134,10 @@
 
       ytmusic-chip-cloud-chip-renderer a:has(> [data-ytm-chip-label]) > yt-formatted-string.text {
         display: none;
+      }
+
+      ytmusic-chip-cloud-chip-renderer[chip-style="STYLE_ICON_SECOND"] [data-ytm-chip-icon] {
+        order: 1;
       }
 
       html:root ytmusic-search-page ytmusic-tabs {
@@ -418,28 +454,142 @@
 
   const homeChipSelector = 'ytmusic-browse-response ytmusic-section-list-renderer #header ytmusic-chip-cloud-chip-renderer';
   const searchChipSelector = 'ytmusic-search-page ytmusic-chip-cloud-chip-renderer';
-  const chipSelector = `${homeChipSelector}, ${searchChipSelector}`;
+  const queueChipSelector = 'ytmusic-queue-header-renderer #buttons ytmusic-chip-cloud-chip-renderer';
+  const chipSelector = `${homeChipSelector}, ${searchChipSelector}, ${queueChipSelector}`;
   const thumbnailPlayButton = 'ytmusic-play-button-renderer#play-button.ytmusic-item-thumbnail-overlay-renderer';
-  const watchedElements = `${chipSelector}, ${thumbnailPlayButton}`;
+  const compactArtworkItems = [
+    'ytmusic-responsive-list-item-renderer',
+    'ytmusic-multi-row-list-item-renderer',
+    'ytmusic-player-queue-item'
+  ];
+  const artworkItem = ['ytmusic-two-row-item-renderer', ...compactArtworkItems].join(', ');
+  const artworkWrapper = [
+    '.image-wrapper.ytmusic-two-row-item-renderer',
+    ...compactArtworkItems.map(item => `.left-items.${item}`)
+  ].join(', ');
+  const watchedElements = `${chipSelector}, ${thumbnailPlayButton}, ${artworkItem}`;
   const musicVideoTypes = new Set(['MUSIC_VIDEO_TYPE_OMV', 'MUSIC_VIDEO_TYPE_UGC']);
+  const artworkState = new WeakMap();
 
-  function updateCategoryChip(chip) {
-    // Firefox can expose the page's renderer data through an Xray wrapper.
-    const data = (chip.wrappedJSObject ?? chip).data;
-    const isSearchChip = chip.matches(searchChipSelector);
-    chip.toggleAttribute('data-ytm-clear-filter', isSearchChip && data?.icon?.iconType === 'CLOSE');
+  const artworkVisibility = new IntersectionObserver(entries => {
+    for (const { target, isIntersecting } of entries) {
+      const state = artworkState.get(target);
+      if (!state || !target.isConnected) continue;
+      state.visible = isIntersecting;
+      updateArtwork(target, state);
+    }
+  });
 
-    const fallback = chip.querySelector('[data-ytm-chip-label]');
-    if (isSearchChip) {
-      fallback?.remove();
+  function getArtworkSource(thumbnailData, width) {
+    const thumbnails = Array.from(thumbnailData?.thumbnails ?? []);
+    const urls = thumbnails.filter(thumbnail => /^(https:)?\/\//i.test(thumbnail.url));
+    urls.sort((first, second) => (first.width ?? 0) - (second.width ?? 0));
+    return (urls.find(thumbnail => thumbnail.width >= width) ?? urls.at(-1))?.url;
+  }
+
+  function observeArtwork(wrapper) {
+    const state = artworkState.get(wrapper);
+    if (state) {
+      updateArtwork(wrapper, state);
+    } else {
+      artworkState.set(wrapper, { visible: false, timer: null, fallback: null });
+      artworkVisibility.observe(wrapper);
+    }
+  }
+
+  function updateArtwork(wrapper, state, recover = false) {
+    const item = wrapper.closest(artworkItem);
+    const nativeRenderer = wrapper.querySelector(
+      ':scope > ytmusic-thumbnail-renderer:is(.image, .thumbnail), ' +
+      ':scope > .thumbnail-wrapper > ytmusic-thumbnail-renderer.thumbnail'
+    );
+    const imageHost = nativeRenderer?.querySelector('yt-img-shadow') ??
+      wrapper.querySelector(':scope > yt-img-shadow.thumbnail');
+    const nativeImage = (imageHost?.shadowRoot ?? imageHost)?.querySelector('img');
+    const nativeReady = imageHost?.hasAttribute('loaded') &&
+      (!nativeImage || nativeImage.naturalWidth > 1);
+
+    if (nativeReady || item?.matches('ytmusic-responsive-list-item-renderer[unplayable]')) {
+      state.fallback?.remove();
+      state.fallback = null;
+      return;
+    }
+    if (!state.visible && !state.fallback) return;
+
+    const itemData = (item?.wrappedJSObject ?? item)?.data;
+    const data = itemData?.thumbnailRenderer?.musicThumbnailRenderer ?? itemData?.thumbnail?.musicThumbnailRenderer ??
+      (nativeRenderer?.wrappedJSObject ?? nativeRenderer)?.data;
+    const thumbnail = data?.thumbnail ?? itemData?.thumbnail ?? (imageHost?.wrappedJSObject ?? imageHost)?.thumbnail;
+    const source = getArtworkSource(thumbnail, wrapper.clientWidth * window.devicePixelRatio);
+    if (state.fallback && state.fallback.getAttribute('src') !== source) {
+      state.fallback.remove();
+      state.fallback = null;
+    }
+    if (!state.visible || !source || state.fallback || state.timer) return;
+
+    if (!recover) {
+      // Let YouTube Music's own lazy loader paint first.
+      state.timer = setTimeout(() => {
+        state.timer = null;
+        if (wrapper.isConnected) updateArtwork(wrapper, state, true);
+      }, 800);
       return;
     }
 
-    const anchor = chip.querySelector('a[role="tab"]');
+    const image = document.createElement('img');
+    image.setAttribute('data-ytm-artwork-fallback', '');
+    image.alt = '';
+    image.draggable = false;
+    image.hidden = true;
+    if (data?.thumbnailScale === 'MUSIC_THUMBNAIL_SCALE_ASPECT_FIT' ||
+        item?.matches('ytmusic-player-queue-item')) {
+      image.style.objectFit = 'contain';
+    }
+    image.addEventListener('load', () => { image.hidden = false; }, { once: true });
+    state.fallback = image;
+    image.src = source;
+    wrapper.prepend(image);
+  }
+
+  function updateChip(chip) {
+    // Firefox can expose the page's renderer data through an Xray wrapper.
+    const renderer = chip.wrappedJSObject ?? chip;
+    const data = renderer.data;
+    const isSearchChip = chip.matches(searchChipSelector);
+    const isQueueChip = chip.matches(queueChipSelector);
+    chip.toggleAttribute('data-ytm-clear-filter', isSearchChip && data?.icon?.iconType === 'CLOSE');
+
+    const fallback = chip.querySelector('[data-ytm-chip-label]');
+    const fallbackIcon = chip.querySelector('[data-ytm-chip-icon]');
+    if (isSearchChip) {
+      fallback?.remove();
+      fallbackIcon?.remove();
+      return;
+    }
+
+    const anchor = chip.querySelector(isQueueChip ? 'a[role="button"]' : 'a[role="tab"]');
     if (!anchor) return;
 
+    // The queue header can create its action before its icon and label are stamped.
+    const iconType = data?.icon?.iconType;
+    const icon = isQueueChip && iconType && !anchor.querySelector(':scope > yt-icon:not([data-ytm-chip-icon])')
+      ? renderer.getMusicIconFromType?.(iconType)
+      : null;
+    if (!icon) {
+      fallbackIcon?.remove();
+    } else if (fallbackIcon) {
+      if (fallbackIcon.getAttribute('icon') !== icon) fallbackIcon.setAttribute('icon', icon);
+    } else {
+      const displayIcon = document.createElement('yt-icon');
+      displayIcon.className = 'ytmusic-chip-cloud-chip-renderer';
+      displayIcon.setAttribute('data-ytm-chip-icon', '');
+      displayIcon.setAttribute('icon', icon);
+      displayIcon.setAttribute('aria-hidden', 'true');
+      anchor.prepend(displayIcon);
+    }
+
     const hasNativeLabel = Array.from(anchor.childNodes).some(node =>
-      node !== fallback && node.textContent.trim()
+      node !== fallback && !node.hasAttribute?.('data-ytm-chip-icon') && node.textContent.trim()
     );
     const text = data?.text;
     const label = (text?.simpleText ?? text?.runs?.map(run => run.text).join('') ?? '').trim();
@@ -470,7 +620,8 @@
   // Process only affected controls and deduplicate them within each mutation batch.
   const observer = new MutationObserver(records => {
     const affected = new Set();
-    for (const { target, addedNodes } of records) {
+    const removedArtwork = new Set();
+    for (const { target, addedNodes, removedNodes } of records) {
       const element = target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
       const control = element?.closest(watchedElements);
       if (control) affected.add(control);
@@ -480,22 +631,39 @@
         if (node.matches(watchedElements)) affected.add(node);
         node.querySelectorAll(watchedElements).forEach(child => affected.add(child));
       }
+
+      for (const node of removedNodes) {
+        if (node.nodeType !== Node.ELEMENT_NODE) continue;
+        if (artworkState.has(node)) removedArtwork.add(node);
+        node.querySelectorAll(artworkWrapper).forEach(child => removedArtwork.add(child));
+      }
+    }
+
+    for (const wrapper of removedArtwork) {
+      const state = artworkState.get(wrapper);
+      if (!state || wrapper.isConnected) continue;
+      artworkVisibility.unobserve(wrapper);
+      clearTimeout(state.timer);
+      state.fallback?.remove();
+      artworkState.delete(wrapper);
     }
 
     for (const control of affected) {
       if (!control.isConnected) continue;
       if (control.matches(thumbnailPlayButton)) markVideoPlayButton(control);
-      else if (control.matches(chipSelector)) updateCategoryChip(control);
+      else if (control.matches(chipSelector)) updateChip(control);
+      else control.querySelectorAll(artworkWrapper).forEach(observeArtwork);
     }
   });
   observer.observe(document, {
     childList: true,
     subtree: true,
     characterData: true,
-    attributeFilter: ['aria-selected', 'aria-label', 'state']
+    attributeFilter: ['aria-selected', 'aria-label', 'chip-style', 'role', 'state', 'href', 'src', 'loaded', 'unplayable']
   });
+  document.querySelectorAll(artworkWrapper).forEach(observeArtwork);
   customElements.whenDefined('ytmusic-chip-cloud-chip-renderer').then(() => {
-    document.querySelectorAll(chipSelector).forEach(updateCategoryChip);
+    document.querySelectorAll(chipSelector).forEach(updateChip);
   });
   customElements.whenDefined('ytmusic-play-button-renderer').then(() => {
     document.querySelectorAll(thumbnailPlayButton).forEach(markVideoPlayButton);
