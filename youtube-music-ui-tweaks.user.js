@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Music UI Tweaks
 // @namespace    https://music.youtube.com/
-// @version      1.1.7
+// @version      1.2.0
 // @description  Shared layout, artwork dimming, and menu interaction tweaks for YouTube Music.
 // @match        https://music.youtube.com/*
 // @run-at       document-start
@@ -21,6 +21,7 @@
         --ytm-radius-popup: 14px;
         --ytm-radius-pill: 24px;
         --ytm-thumbnail-scrim: rgb(0 0 0 / 50%);
+        --ytm-menu-hover: var(--ytmusic-search-suggestion-focus-active-background, rgb(255 255 255 / 10%));
       }
 
       html:root ytmusic-app tp-yt-app-drawer[persistent] #guide-wrapper.ytmusic-app {
@@ -107,18 +108,33 @@
         transition: background-color .2s;
       }
 
+      html:root :is(
+        ytmusic-search-page,
+        #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+      ) ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+        height: 36px;
+        min-width: 36px;
+        border: 0;
+        border-radius: var(--ytm-radius-medium);
+      }
+
       @media (prefers-color-scheme: dark) {
-        html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+        html:root :is(
+          ytmusic-search-page,
+          #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+        ) ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+          --ytm-filter-base: var(--ytmusic-background);
+          --ytm-filter-fill: color-mix(in srgb, var(--ytmusic-color-white1) 10%, var(--ytm-filter-base));
           --yt-endpoint-color: currentColor;
           --yt-endpoint-hover-color: currentColor;
           --yt-endpoint-visited-color: currentColor;
           --icon-color: currentColor;
           --iron-icon-fill-color: currentColor;
-          background-color: color-mix(in srgb, var(--ytmusic-color-white1) 10%, var(--ytmusic-background));
-          color: var(--ytmusic-text-primary);
+          background-color: var(--ytm-filter-fill);
+          color: var(--ytmusic-color-white1);
 
           &:is(:hover, :focus-visible) {
-            background-color: color-mix(in srgb, var(--ytmusic-color-white1) 20%, var(--ytmusic-background));
+            background-color: color-mix(in srgb, var(--ytmusic-color-white1) 12%, var(--ytm-filter-fill));
           }
 
           & > yt-icon {
@@ -126,17 +142,24 @@
           }
         }
 
-        html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer
-          a.ytmusic-chip-cloud-chip-renderer[aria-selected="true"],
-        html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer:is(
-          [is-selected], [selected], .iron-selected, [data-ytm-clear-filter]
-        )
-          a.ytmusic-chip-cloud-chip-renderer {
-          background-color: var(--ytmusic-color-white1);
+        html:root #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+          ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+          --ytm-filter-base: transparent;
+        }
+
+        html:root :is(
+          ytmusic-search-page,
+          #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+        ) :is(
+          ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer[aria-selected="true"],
+          ytmusic-chip-cloud-chip-renderer:is([is-selected], [selected], .iron-selected, [data-ytm-clear-filter])
+            a.ytmusic-chip-cloud-chip-renderer
+        ) {
+          --ytm-filter-fill: var(--ytmusic-color-white1);
           color: var(--ytmusic-color-black4);
 
           &:is(:hover, :focus-visible) {
-            background-color: color-mix(in srgb, var(--ytmusic-color-white1) 88%, var(--ytmusic-color-black4));
+            background-color: color-mix(in srgb, var(--ytmusic-color-black4) 12%, var(--ytm-filter-fill));
           }
         }
       }
@@ -257,20 +280,38 @@
           [video-mode]:not([has-av-switcher]), [has-av-switcher][playback-mode=OMV_PREFERRED]
         ):not([is-mobile-web], :hover, :focus-within, [focus-within]) .ytp-large-play-button,
         html:root ytmusic-item-thumbnail-overlay-renderer:not(
-          [is-mobile-web], :hover, :focus-within, [focus-within],
+          [is-mobile-web], :hover, :focus-within, [focus-within], ytmusic-two-row-item-renderer *,
           :is(
             ytmusic-responsive-list-item-renderer, ytmusic-multi-row-list-item-renderer, ytmusic-player-queue-item
           ):is(:hover, :focus-within, [focus-within]) *
         ) > #content.ytmusic-item-thumbnail-overlay-renderer
-          > ytmusic-play-button-renderer[data-ytm-video-play-button]:not([state=playing], [state=loading]) {
+          > ytmusic-play-button-renderer#play-button[data-ytm-video-play-button]:not([state=playing], [state=loading]) {
           opacity: 0;
           pointer-events: none;
+        }
+
+        html:root ytmusic-two-row-item-renderer ytmusic-item-thumbnail-overlay-renderer:not([is-mobile-web]) {
+          /* Returning focus to the menu button should not reveal Play. */
+          &:not(:hover, :has(> #content > #play-button:focus-visible)) {
+            & > #content.ytmusic-item-thumbnail-overlay-renderer
+              > ytmusic-play-button-renderer#play-button:not([state=playing], [state=loading]) {
+              opacity: 0;
+              pointer-events: none;
+            }
+          }
+
+          &:has(> #content > #play-button:focus-visible) {
+            & > #background.ytmusic-item-thumbnail-overlay-renderer,
+            & > #content.ytmusic-item-thumbnail-overlay-renderer > ytmusic-play-button-renderer#play-button {
+              opacity: 1;
+            }
+          }
         }
       }
 
       html:root ytmusic-multi-page-menu-renderer {
         box-sizing: border-box;
-        border: 1px solid var(--ytmusic-search-bar-border-bauhaus, var(--ytmusic-divider));
+        border: 1px solid var(--ytm-menu-border, var(--ytmusic-search-bar-border-bauhaus, var(--ytmusic-divider)));
         border-radius: var(--ytm-radius-pill);
         overflow: auto;
       }
@@ -293,7 +334,7 @@
       ) {
         box-sizing: border-box;
         background-color: var(--ytmusic-menu-popup-background);
-        border: 1px solid var(--ytm-outline, var(--ytmusic-icon-disabled, #606060));
+        border: 1px solid var(--ytm-menu-border, var(--ytmusic-divider));
         border-radius: var(--ytm-radius-menu);
         overflow: auto;
         scrollbar-color: var(--ytm-outline, var(--ytmusic-icon-inactive, #777)) transparent;
@@ -328,27 +369,49 @@
 
       /* Opening a menu with the pointer can focus its first item. Keep that
          focus invisible until the user navigates with the keyboard. */
-      html:root :is(ytmusic-menu-popup-renderer, ytmusic-multi-select-menu-renderer) {
+      html:root :is(ytmusic-menu-popup-renderer, ytmusic-multi-select-menu-renderer, ytmusic-playback-rate-popup-renderer) {
         --ytmusic-menu-item-focus-background-color: transparent;
         --paper-item-focused-background-color: transparent;
         --paper-item-focused-before-opacity: 0;
 
-        & #items :is(
+        & #items > :is(
           ytmusic-menu-navigation-item-renderer,
           ytmusic-menu-service-item-renderer,
           ytmusic-toggle-menu-service-item-renderer,
-          ytmusic-multi-select-menu-item-renderer,
-          ytmusic-menu-service-item-download-renderer > tp-yt-paper-item
+          ytmusic-multi-select-menu-item-renderer
         ):not([is-disabled], [disabled], [aria-disabled="true"], [is-request-in-progress]) {
           &:is(:focus, :focus-within):not(:hover) {
             background-color: transparent;
           }
-
-          &:is(:focus-visible:not(.no-focus-outline *),
-            :has(:focus-visible:not(.no-focus-outline *))) {
-            background-color: var(--ytm-menu-highlight, rgb(255 255 255 / 12%));
-          }
         }
+      }
+
+      html:root ytmusic-menu-popup-renderer #items.ytmusic-menu-popup-renderer
+        > ytmusic-menu-service-item-download-renderer.ytmusic-menu-popup-renderer:hover {
+        background-color: transparent;
+      }
+
+      html:root :is(
+        ytmusic-menu-popup-renderer #items > :is(
+          ytmusic-menu-navigation-item-renderer, ytmusic-menu-service-item-renderer,
+          ytmusic-toggle-menu-service-item-renderer, [role="menuitem"]
+        ),
+        ytmusic-menu-popup-renderer #items > ytmusic-menu-service-item-download-renderer > tp-yt-paper-item,
+        ytmusic-multi-select-menu-renderer #items > ytmusic-multi-select-menu-item-renderer,
+        ytmusic-playback-rate-popup-renderer tp-yt-paper-item.ytmusic-playback-rate-popup-renderer,
+        ytmusic-multi-page-menu-renderer :is(
+          #items.yt-multi-page-menu-section-renderer > .yt-multi-page-menu-section-renderer:not(ytd-message-renderer),
+          ytd-compact-link-renderer, ytd-account-item-renderer
+        ):not([compact-link-style=compact-link-style-type-disclaimer]),
+        tp-yt-paper-listbox.yt-dropdown-menu tp-yt-paper-item:not(.iron-selected *),
+        ytmusic-dropdown-item-renderer,
+        tp-yt-paper-item.yt-options-renderer,
+        ytmusic-add-to-playlist-renderer ytmusic-playlist-add-to-option-renderer
+      ):not([is-disabled], [disabled], [aria-disabled="true"], [is-request-in-progress]):is(
+        :hover, :focus-visible:not(.no-focus-outline *), :has(:focus-visible:not(.no-focus-outline *))
+      ) {
+        --paper-item-focused-before-opacity: 0;
+        background-color: var(--ytm-menu-hover);
       }
     }
   `);
@@ -356,71 +419,46 @@
   const homeChipSelector = 'ytmusic-browse-response ytmusic-section-list-renderer #header ytmusic-chip-cloud-chip-renderer';
   const searchChipSelector = 'ytmusic-search-page ytmusic-chip-cloud-chip-renderer';
   const chipSelector = `${homeChipSelector}, ${searchChipSelector}`;
-
-  function restoreCategoryLabels() {
-    for (const chip of document.querySelectorAll(homeChipSelector)) {
-      const anchor = chip.querySelector('a[role="tab"]');
-      if (!anchor) continue;
-
-      const fallback = anchor.querySelector('[data-ytm-chip-label]');
-      const hasNativeLabel = Array.from(anchor.childNodes).some(node =>
-        node !== fallback && node.textContent.trim()
-      );
-      if (hasNativeLabel) {
-        fallback?.remove();
-        continue;
-      }
-
-      // Firefox can expose the page's renderer data through an Xray wrapper.
-      const data = (chip.wrappedJSObject ?? chip).data?.text;
-      const label = (data?.simpleText ?? data?.runs?.map(run => run.text).join('') ?? '').trim();
-      if (!label) {
-        fallback?.remove();
-        continue;
-      }
-
-      if (fallback) {
-        if (fallback.textContent !== label) fallback.textContent = label;
-        continue;
-      }
-
-      const text = document.createElement('span');
-      text.className = 'text ytmusic-chip-cloud-chip-renderer';
-      text.setAttribute('data-ytm-chip-label', '');
-      text.textContent = label;
-      anchor.append(text);
-    }
-  }
-
-  function updateCategoryChips() {
-    restoreCategoryLabels();
-    for (const chip of document.querySelectorAll(searchChipSelector)) {
-      const data = (chip.wrappedJSObject ?? chip).data;
-      chip.toggleAttribute('data-ytm-clear-filter', data?.icon?.iconType === 'CLOSE');
-    }
-  }
-
-  const categoryObserver = new MutationObserver(records => {
-    const chipsChanged = records.some(({ target, addedNodes }) => {
-      const element = target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
-      return element?.closest(chipSelector) || Array.from(addedNodes).some(node =>
-        node.nodeType === Node.ELEMENT_NODE &&
-        (node.matches(chipSelector) || node.querySelector(chipSelector))
-      );
-    });
-    if (chipsChanged) updateCategoryChips();
-  });
-  categoryObserver.observe(document, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-    attributeFilter: ['aria-selected']
-  });
-  customElements.whenDefined('ytmusic-chip-cloud-chip-renderer').then(updateCategoryChips);
-  updateCategoryChips();
-
   const thumbnailPlayButton = 'ytmusic-play-button-renderer#play-button.ytmusic-item-thumbnail-overlay-renderer';
+  const watchedElements = `${chipSelector}, ${thumbnailPlayButton}`;
   const musicVideoTypes = new Set(['MUSIC_VIDEO_TYPE_OMV', 'MUSIC_VIDEO_TYPE_UGC']);
+
+  function updateCategoryChip(chip) {
+    // Firefox can expose the page's renderer data through an Xray wrapper.
+    const data = (chip.wrappedJSObject ?? chip).data;
+    const isSearchChip = chip.matches(searchChipSelector);
+    chip.toggleAttribute('data-ytm-clear-filter', isSearchChip && data?.icon?.iconType === 'CLOSE');
+
+    const fallback = chip.querySelector('[data-ytm-chip-label]');
+    if (isSearchChip) {
+      fallback?.remove();
+      return;
+    }
+
+    const anchor = chip.querySelector('a[role="tab"]');
+    if (!anchor) return;
+
+    const hasNativeLabel = Array.from(anchor.childNodes).some(node =>
+      node !== fallback && node.textContent.trim()
+    );
+    const text = data?.text;
+    const label = (text?.simpleText ?? text?.runs?.map(run => run.text).join('') ?? '').trim();
+    if (hasNativeLabel || !label) {
+      fallback?.remove();
+      return;
+    }
+
+    if (fallback) {
+      if (fallback.textContent !== label) fallback.textContent = label;
+      return;
+    }
+
+    const displayLabel = document.createElement('span');
+    displayLabel.className = 'text ytmusic-chip-cloud-chip-renderer';
+    displayLabel.setAttribute('data-ytm-chip-label', '');
+    displayLabel.textContent = label;
+    anchor.append(displayLabel);
+  }
 
   function markVideoPlayButton(button) {
     // The play endpoint identifies videos even when their artwork is cropped square.
@@ -429,19 +467,36 @@
     button.toggleAttribute('data-ytm-video-play-button', musicVideoTypes.has(type));
   }
 
-  const videoObserver = new MutationObserver(records => {
+  // Process only affected controls and deduplicate them within each mutation batch.
+  const observer = new MutationObserver(records => {
+    const affected = new Set();
     for (const { target, addedNodes } of records) {
-      if (target.nodeType === Node.ELEMENT_NODE && target.matches(thumbnailPlayButton)) {
-        markVideoPlayButton(target);
-      }
+      const element = target.nodeType === Node.ELEMENT_NODE ? target : target.parentElement;
+      const control = element?.closest(watchedElements);
+      if (control) affected.add(control);
+
       for (const node of addedNodes) {
         if (node.nodeType !== Node.ELEMENT_NODE) continue;
-        if (node.matches(thumbnailPlayButton)) markVideoPlayButton(node);
-        node.querySelectorAll(thumbnailPlayButton).forEach(markVideoPlayButton);
+        if (node.matches(watchedElements)) affected.add(node);
+        node.querySelectorAll(watchedElements).forEach(child => affected.add(child));
       }
     }
+
+    for (const control of affected) {
+      if (!control.isConnected) continue;
+      if (control.matches(thumbnailPlayButton)) markVideoPlayButton(control);
+      else if (control.matches(chipSelector)) updateCategoryChip(control);
+    }
   });
-  videoObserver.observe(document, { childList: true, subtree: true, attributeFilter: ['aria-label', 'state'] });
+  observer.observe(document, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+    attributeFilter: ['aria-selected', 'aria-label', 'state']
+  });
+  customElements.whenDefined('ytmusic-chip-cloud-chip-renderer').then(() => {
+    document.querySelectorAll(chipSelector).forEach(updateCategoryChip);
+  });
   customElements.whenDefined('ytmusic-play-button-renderer').then(() => {
     document.querySelectorAll(thumbnailPlayButton).forEach(markVideoPlayButton);
   });

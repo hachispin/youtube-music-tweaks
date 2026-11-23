@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Music Light Mode
 // @namespace    https://music.youtube.com/
-// @version      1.1.7
+// @version      1.2.0
 // @description  A light colour palette for YouTube Music that follows your device setting.
 // @match        https://music.youtube.com/*
 // @run-at       document-start
@@ -26,6 +26,7 @@
         --ytm-on-variant: #535353;
         --ytm-outline: #777;
         --ytm-divider: #d6d6d6;
+        --ytm-menu-border: rgb(28 28 28 / 10%);
         --ytm-track: #b9b9b9;
         --ytm-primary: #000;
         --ytm-on-primary: #fff;
@@ -119,7 +120,7 @@
         --ytmusic-dialog-background-color: var(--ytm-surface-high);
         --ytmusic-confirm-dialog-outline: var(--ytm-divider);
         --ytmusic-dropdown-background: var(--ytm-surface-high);
-        --ytmusic-dropdown-item-hover-background: var(--ytm-hover);
+        --ytmusic-dropdown-item-hover-background: var(--ytmusic-search-suggestion-focus-active-background);
         --ytmusic-dropdown-border-color: var(--ytm-divider);
         --ytmusic-setting-item-toggle-inactive-bar: var(--ytm-outline);
         --ytmusic-color-white-opacity-0-05: var(--ytm-hover);
@@ -308,28 +309,34 @@
         background-color: var(--ytm-selected-hover) !important;
       }
 
-      html:root #browse-page ytmusic-section-list-renderer #header
-        ytmusic-chip-cloud-renderer[chip-type="DEFAULT"] ytmusic-chip-cloud-chip-renderer a[role="tab"] {
-        background-color: transparent;
-        border: 1px solid var(--ytm-outline);
+      html:root :is(
+        ytmusic-search-page,
+        #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+      ) ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+        --ytm-filter-base: var(--ytm-surface);
+        --ytm-filter-fill: color-mix(in srgb, var(--ytm-on-surface) 6%, var(--ytm-filter-base));
+        background-color: var(--ytm-filter-fill);
+        border-color: transparent;
 
-        &:hover {
-          background-color: var(--ytm-button-hover);
-          border-color: var(--ytm-on-variant);
+        &:is(:hover, :focus-visible) {
+          background-color: color-mix(in srgb, var(--ytm-on-surface) 14%, var(--ytm-filter-fill));
         }
       }
 
-      html:root #browse-page ytmusic-section-list-renderer #header
-        ytmusic-chip-cloud-renderer[chip-type="DEFAULT"] ytmusic-chip-cloud-chip-renderer a[role="tab"][aria-selected="true"],
-      html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer
-        a.ytmusic-chip-cloud-chip-renderer:is(
-          [aria-selected="true"],
-          [role="button"]:has(> yt-icon):not(:has(> .text))
-        ),
-      html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer:is(
-        [is-selected], [selected], .iron-selected, [data-ytm-clear-filter]
-      )
-        a.ytmusic-chip-cloud-chip-renderer {
+      html:root #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+        ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
+        --ytm-filter-base: transparent;
+      }
+
+      html:root :is(
+        ytmusic-search-page,
+        #browse-page ytmusic-section-list-renderer #header ytmusic-chip-cloud-renderer[chip-type="DEFAULT"]
+      ) :is(
+        ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer[aria-selected="true"],
+        ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer[role="button"]:has(> yt-icon):not(:has(> .text)),
+        ytmusic-chip-cloud-chip-renderer:is([is-selected], [selected], .iron-selected, [data-ytm-clear-filter])
+          a.ytmusic-chip-cloud-chip-renderer
+      ) {
         --yt-endpoint-hover-color: var(--ytm-on-primary);
         --icon-color: currentColor;
         --iron-icon-fill-color: currentColor;
@@ -337,16 +344,8 @@
         border-color: transparent;
         color: var(--ytm-on-primary) !important;
 
-        &:hover {
-          background-color: #292929 !important;
-        }
-      }
-
-      html:root ytmusic-search-page ytmusic-chip-cloud-chip-renderer a.ytmusic-chip-cloud-chip-renderer {
-        background-color: var(--ytm-surface-container);
-
         &:is(:hover, :focus-visible) {
-          background-color: color-mix(in srgb, var(--ytm-on-surface) 14%, var(--ytm-surface-container));
+          background-color: #292929 !important;
         }
       }
 
@@ -463,14 +462,38 @@
       }
 
       html:root ytmusic-responsive-header-renderer[is-playlist-detail-page]
-        #action-buttons.ytmusic-responsive-header-renderer ytmusic-menu-renderer {
-        --ytmusic-menu-renderer-overflow-button-color: var(--ytm-on-surface);
-        --icon-color: var(--ytm-on-surface);
-        --iron-icon-fill-color: var(--ytm-on-surface);
+        #action-buttons.ytmusic-responsive-header-renderer
+        > :is(yt-button-renderer, ytmusic-toggle-button-renderer, ytmusic-menu-renderer).ytmusic-responsive-header-renderer:not(
+          ytmusic-responsive-header-renderer[num-header-buttons="3"] .ytmusic-responsive-header-renderer:nth-child(2),
+          ytmusic-responsive-header-renderer[num-header-buttons="5"] .ytmusic-responsive-header-renderer:nth-child(3)
+        ) {
+        --ytm-playlist-action-ink: var(--ytm-on-surface);
+        --yt-button-color: var(--ytm-playlist-action-ink);
+        --ytmusic-toggle-button-color: var(--ytm-playlist-action-ink);
+        --ytmusic-menu-renderer-overflow-button-color: var(--ytm-playlist-action-ink);
+        --icon-color: var(--ytm-playlist-action-ink);
+        --iron-icon-fill-color: var(--ytm-playlist-action-ink);
         background-color: var(--ytm-surface-high) !important;
+        color: var(--ytm-playlist-action-ink);
 
-        & :is(button, yt-icon-button):not(:disabled, [disabled], [aria-disabled="true"]) {
-          color: var(--ytm-on-surface);
+        &:is([disabled], [aria-disabled="true"], .style-visibly-disabled,
+          :has(:is(button, yt-icon-button, tp-yt-paper-button):is(:disabled, [disabled], [aria-disabled="true"]))) {
+          --ytm-playlist-action-ink: var(--ytm-on-variant);
+        }
+
+        &:not([disabled], [aria-disabled="true"], .style-visibly-disabled,
+          :has(:is(button, yt-icon-button, tp-yt-paper-button):is(:disabled, [disabled], [aria-disabled="true"]))) {
+          &:is(:hover, :focus-visible, :has(:focus-visible)) {
+            background-color: color-mix(in srgb, var(--ytm-on-surface) 14%, var(--ytm-surface-high)) !important;
+          }
+
+          & :is(button, a, yt-icon-button, tp-yt-paper-button):is(:hover, :focus-visible) {
+            background-color: transparent !important;
+          }
+        }
+
+        & :is(button, a, yt-icon-button, tp-yt-paper-button, yt-icon, .ytIconWrapperHost) {
+          color: var(--ytm-playlist-action-ink);
         }
       }
 
@@ -786,6 +809,7 @@
         --yt-compact-link-icon-color: var(--ytm-on-surface);
         background-color: var(--ytmusic-search-bar-background-bauhaus);
         color: var(--ytm-on-surface);
+        border-color: var(--ytm-menu-border);
         box-shadow: var(--ytm-elevation);
 
         & :is(
@@ -839,22 +863,16 @@
         }
       }
 
-      html:root :is(ytmusic-menu-popup-renderer, ytmusic-playback-rate-popup-renderer) {
-        background-color: var(--ytmusic-menu-popup-background);
-      }
-
       /* Draw the border around the scroll viewport, independent of its rows. */
-      html:root ytmusic-menu-popup-renderer {
+      html:root :is(ytmusic-menu-popup-renderer, ytmusic-playback-rate-popup-renderer) {
         box-sizing: border-box;
-        border: 1px solid var(--ytm-outline);
+        background-color: var(--ytmusic-menu-popup-background);
+        border: 1px solid var(--ytm-menu-border);
       }
 
       html:root :is(ytmusic-menu-popup-renderer, ytmusic-playback-rate-popup-renderer)
         > tp-yt-paper-listbox:is(.ytmusic-menu-popup-renderer, .ytmusic-playback-rate-popup-renderer) {
         --paper-listbox-background-color: transparent;
-      }
-
-      html:root ytmusic-menu-popup-renderer > tp-yt-paper-listbox.ytmusic-menu-popup-renderer {
         border-width: 0;
       }
 
@@ -885,6 +903,11 @@
         color: var(--ytm-on-surface);
       }
 
+      html:root ytmusic-multi-select-menu-renderer #container.ytmusic-multi-select-menu-renderer,
+      html:root tp-yt-paper-listbox.yt-dropdown-menu {
+        border-color: var(--ytm-menu-border);
+      }
+
       html:root tp-yt-paper-listbox.yt-dropdown-menu {
         & :is(.item, .yt-simple-endpoint, #subtitle).yt-dropdown-menu {
           --yt-endpoint-color: var(--ytm-on-surface);
@@ -892,27 +915,27 @@
           color: var(--ytm-on-surface);
         }
 
-        & :is(.iron-selected, tp-yt-paper-item).yt-dropdown-menu:is(.iron-selected, :hover, :focus-visible) {
-          background-color: var(--ytm-button-hover);
+        & .iron-selected.yt-dropdown-menu,
+        & tp-yt-paper-item.yt-dropdown-menu:not(.iron-selected *):is(:hover, :focus-visible) {
+          background-color: var(--ytmusic-search-suggestion-focus-active-background);
         }
       }
 
       html:root :is(ytmusic-menu-popup-renderer, ytmusic-multi-select-menu-renderer) {
         --ytm-menu-icon: var(--ytm-on-surface);
-        --ytm-menu-highlight: #c9c9c9;
         --ytmusic-menu-item-focus-background-color: transparent;
 
-        & #items :is(
-          ytmusic-menu-navigation-item-renderer,
-          ytmusic-menu-service-item-renderer,
-          ytmusic-toggle-menu-service-item-renderer,
-          ytmusic-multi-select-menu-item-renderer,
-          ytmusic-menu-service-item-download-renderer > tp-yt-paper-item,
-          [role="menuitem"]
+        & #items > :is(
+          ytmusic-menu-navigation-item-renderer, ytmusic-menu-service-item-renderer,
+          ytmusic-toggle-menu-service-item-renderer, ytmusic-multi-select-menu-item-renderer, [role="menuitem"]
         ):not([is-disabled], [disabled], [aria-disabled="true"], [is-request-in-progress]):is(
           :hover, :focus-visible:not(.no-focus-outline *), :has(:focus-visible:not(.no-focus-outline *))
+        ),
+        & #items > ytmusic-menu-service-item-download-renderer
+          > tp-yt-paper-item:not([is-disabled], [disabled], [aria-disabled="true"], [is-request-in-progress]):is(
+          :hover, :focus-visible:not(.no-focus-outline *), :has(:focus-visible:not(.no-focus-outline *))
         ) {
-          background-color: var(--ytm-menu-highlight);
+          background-color: var(--ytmusic-search-suggestion-focus-active-background);
         }
 
         & :is([is-disabled], [disabled], [aria-disabled="true"]) {
